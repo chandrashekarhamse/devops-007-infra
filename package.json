@@ -1,0 +1,33 @@
+{
+  "name": "devops-007",
+  "version": "1.0.0",
+  "description": "This is devops architecture repo",
+  "main": "index.js",
+  "scripts": {
+    "deploy:master": "make master",
+    "deploy:slave": "make slave",
+    "destroy:master": "make master-destroy",
+    "destroy:slave": "make slave-destroy"
+  },
+  "engines": {
+    "node": ">= 22.0.0"
+  },
+  "keywords": [],
+  "author": "chandrashekarhamse93@gmail.com",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chandrashekarhamse/devops-007.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chandrashekarhamse/devops-007/issues"
+  },
+  "homepage": "https://github.com/chandrashekarhamse/devops-007#readme",
+  "dependencies": {
+    "serverless-ssm-fetch": "^2.0.0",
+    "serverless-stack-output": "^0.2.3"
+  },
+  "devDependencies": {
+    "@serverless/compose": "^1.3.0"
+  }
+}

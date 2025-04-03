@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A cloudformation template to create the jenkins slave
+Resources:
+
+  JenkinsSlaveServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action: 
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - "*"
+      RoleName: !Sub ${AWS::StackName}-role
+
+  JenkinsSlaveInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref JenkinsSlaveServiceRole
+
+  JenkinsSlaveSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "This is a security group fo jenkins slave"
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"  # Allows access from anywhere (change for more restrictive rules)
+          IpProtocol: "tcp"
+          FromPort: "80"  # HTTP port (change to the desired port)
+          ToPort: "80"
+        - CidrIp: "0.0.0.0/0"  # Allows access from anywhere (change for more restrictive rules)
+          IpProtocol: "tcp"
+          FromPort: "8080"  # Jenkins port (change to the desired port)
+          ToPort: "8080"
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "tcp"
+          FromPort: "22"   #SSH port
+          ToPort: "22"
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "tcp"
+          FromPort: "50000"   #Allowing agent to connect the master
+          ToPort: "50000"
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "tcp"
+          FromPort: "2376"   #Allowing agent to connect the master
+          ToPort: "2376"
+      VpcId: ${self:custom.task.vpcid}
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-securitygroup
+
+  JenkinsSlaveEC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AWS::StackName}-launcTemplate
+      LaunchTemplateData:
+        ImageId: ${self:custom.task.amiid}
+        InstanceType: ${self:custom.task.instancetype} 
+        IamInstanceProfile:
+          Arn: !GetAtt 
+            - JenkinsSlaveInstanceProfile
+            - Arn
+        InstanceInitiatedShutdownBehavior: terminate
+        SecurityGroupIds:
+          - !Ref JenkinsSlaveSecurityGroup
+
+        TagSpecifications:
+          - ResourceType: "instance"
+            Tags:
+            - Key: Name
+              Value: !Sub ${AWS::StackName}-instance
+            - Key: app:environment
+              Value: ${self:custom.task.environment}
+          - ResourceType: "volume"
+            Tags:
+              - Key: Name
+                Value: !Sub ${AWS::StackName}-volume
+              - Key: app:environment
+                Value: ${self:custom.task.environment}
+        UserData: 
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+            set -e
+            echo "---- BEGIN SLAVE CONFIGURATION ----"
+            
+            # Docker setup
+            echo "---- Install docker ----"
+            sudo yum update -y
+            sudo yum -y install docker
+            sudo service docker start
+            sudo systemctl enable docker
+            sudo usermod -a -G docker ec2-user
+            sudo chmod 666 /var/run/docker.sock
+
+            # Setup the docker host for master to connect
+            # Find the line starting with ExecStart and replace it with the following:
+            sudo sed -i 's|ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock $OPTIONS $DOCKER_STORAGE_OPTIONS $DOCKER_ADD_RUNTIMES|ExecStart=/usr/bin/dockerd -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock|' /lib/systemd/system/docker.service
+            sudo systemctl daemon-reload
+            sudo service docker restart
+
+            # Update and install Java
+            echo "---- Install java ----"
+            sudo yum update -y
+            sudo yum install java-17-amazon-corretto -y
+            
+            JENKINS_MASTER_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=${self:custom.jenkinsmaster.name}" "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
+            JENKINS_URL="http://$JENKINS_MASTER_IP:8080"
+            JENKINS_USER="jenkins"
+            JENKINS_AGENT_NAME="ec2-linux-docker-agent"
+            JENKINS_TOKEN=$(aws secretsmanager get-secret-value --secret-id  "${self:custom.agent.secret}" --region us-east-1 --query SecretString | jq -r '. | fromjson | .jenkins_api_token')
+            JENKINS_AGENT_SECRET=$(curl -L -s -u $JENKINS_USER:$JENKINS_TOKEN $JENKINS_URL/manage/computer/$JENKINS_AGENT_NAME/jenkins-agent.jnlp | sed "s/.*<application-desc><argument>\([a-z0-9]*\).*/\1\n/")
+            JENKINS_AGENT_WORKDIR="/home/jenkins"
+
+            # Download the Jenkins agent JAR
+            mkdir -p $JENKINS_AGENT_WORKDIR
+            cd $JENKINS_AGENT_WORKDIR
+            curl -sO $JENKINS_URL/jnlpJars/agent.jar
+
+            # Run the Jenkins agent with the specified secret
+            java -jar agent.jar -url $JENKINS_URL -secret $JENKINS_AGENT_SECRET -name $JENKINS_AGENT_NAME -webSocket -workDir $JENKINS_AGENT_WORKDIR
+
+            echo "---- END OF SLAVE CONFIGURATION ----"
+
+  JenkinsSlaveAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}-autoscaling-group
+      AvailabilityZones:
+        - us-east-1a
+        - us-east-1b
+        - us-east-1c
+      MaxSize: 1
+      MinSize: 1
+      DesiredCapacity: 1
+      LaunchTemplate:
+        LaunchTemplateId: !Ref JenkinsSlaveEC2LaunchTemplate
+        Version: !GetAtt JenkinsSlaveEC2LaunchTemplate.LatestVersionNumber

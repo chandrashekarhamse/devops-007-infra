@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A cloudformation template to create the jenkins master
+Resources:
+
+  JenkinsServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: "Allow"
+                Action: 
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - "*"
+      RoleName: !Sub ${AWS::StackName}-role
+          
+  JenkinsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref JenkinsServiceRole
+
+  JenkinsMasterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "This is a security group fo jenkins master"
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"  # Allows access from anywhere (change for more restrictive rules)
+          IpProtocol: "tcp"
+          FromPort: "80"  # HTTP port (change to the desired port)
+          ToPort: "80"
+        - CidrIp: "0.0.0.0/0"  # Allows access from anywhere (change for more restrictive rules)
+          IpProtocol: "tcp"
+          FromPort: "8080"  # Jenkins port (change to the desired port)
+          ToPort: "8080"
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "tcp"
+          FromPort: "22"   #SSH port
+          ToPort: "22"
+      VpcId: ${self:custom.task.vpcid}
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-securitygroup
+
+  JenkinsEC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${AWS::StackName}-launcTemplate
+      LaunchTemplateData:
+        ImageId: ${self:custom.task.amiid}
+        InstanceType: ${self:custom.task.instancetype} 
+        IamInstanceProfile:
+          Arn: !GetAtt 
+            - JenkinsInstanceProfile
+            - Arn
+        InstanceInitiatedShutdownBehavior: terminate
+        SecurityGroupIds:
+          - !Ref JenkinsMasterSecurityGroup
+        
+        BlockDeviceMappings:
+          - DeviceName: 
+
+        TagSpecifications:
+          - ResourceType: "instance"
+            Tags:
+            - Key: Name
+              Value: !Sub ${AWS::StackName}-instance
+            - Key: app:environment
+              Value: ${self:custom.task.environment}
+          - ResourceType: "volume"
+            Tags:
+              - Key: Name
+                Value: !Sub ${AWS::StackName}-volume
+              - Key: app:environment
+                Value: ${self:custom.task.environment}
+        UserData: 
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+            INSTANCE_ID=$(ec2-metadata -i | awk '{print $2}')
+            aws ec2 attach-volume --volume-id ${self:custom.ebs.volumeID} --instance-id $INSTANCE_ID --device ${self:custom.ebs.device_name}
+            sudo yum install java-17-amazon-corretto -y
+            sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+            sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+            sudo yum install jenkins -y
+            sudo mount ${self:custom.ebs.device_name} ${self:custom.ebs.mount_path}
+            sudo chown -R jenkins:jenkins ${self:custom.ebs.mount_path}
+            sudo chmod -R 755 ${self:custom.ebs.mount_path}
+            INSTANCE_IP=$(curl -s http://checkip.amazonaws.com)
+            sudo sed -i "s|<jenkinsUrl>.*</jenkinsUrl>|<jenkinsUrl>http://$INSTANCE_IP:8080/</jenkinsUrl>|" ${self:custom.ebs.mount_path}/jenkins.model.JenkinsLocationConfiguration.xml
+            sudo systemctl restart jenkins.service
+
+  JenkinsMasterAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}-autoscaling-group
+      AvailabilityZones:
+        - us-east-1d
+      MaxSize: 1
+      MinSize: 1
+      DesiredCapacity: 1
+      LaunchTemplate:
+        LaunchTemplateId: !Ref JenkinsEC2LaunchTemplate
+        Version: !GetAtt JenkinsEC2LaunchTemplate.LatestVersionNumber
+      
+              

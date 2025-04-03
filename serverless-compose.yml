@@ -1,0 +1,5 @@
+services:
+  devops-007-infra-jenkins-master:
+    path: "jenkins-master/"
+  devops-007-infra-jenkins-slave:
+    path: "jenkins-slave/"

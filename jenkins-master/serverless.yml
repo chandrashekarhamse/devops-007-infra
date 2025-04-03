@@ -1,0 +1,25 @@
+service: devops-007-infra-jenkins-master
+useDotenv: true
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  deploymentBucket:
+    name: ${env:SLS_DEPLOYMENT_BUCKET_NAME}
+
+custom:
+  task:
+    amiid: ${env:AMI_IMAGE_ID}
+    instancetype: ${env:INSTANCE_TYPE}
+    environment: ${env:ENVIRONMENT}
+    vpcid: ${env:VPC_ID}
+
+  ebs:
+    volumeID: ${env:EBS_VOLUME_ID}
+    device_name: ${env:DEVICE_NAME}
+    mount_path: ${env:MOUNT_PATH}
+
+resources:
+  - ${file(./jenkins-linux-ec2.yml)}

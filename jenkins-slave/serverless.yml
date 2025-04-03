@@ -1,0 +1,27 @@
+service: devops-007-infra-jenkins-slave
+useDotenv: true
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  deploymentBucket:
+    name: ${env:SLS_DEPLOYMENT_BUCKET_NAME}
+
+custom:
+  task:
+    environment: dev
+    vpcid: ${env:VPC_ID}
+    amiid: ${env:AMI_IMAGE_ID}
+    instancetype: ${env:INSTANCE_TYPE}
+
+  jenkinsmaster:
+    name: ${env:JENKINS_MASTER_INSTANCE_NAME}
+  
+  agent:
+    secret: ${env:JENKINS_API_TOKEN}
+
+resources:
+  - ${file(./jenkins-slave-linux-ec2.yml)}
+  
