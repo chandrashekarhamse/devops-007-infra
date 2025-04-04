@@ -6,8 +6,10 @@
   "scripts": {
     "deploy:master": "make master",
     "deploy:slave": "make slave",
+    "deploy:both": "make both",
     "destroy:master": "make master-destroy",
-    "destroy:slave": "make slave-destroy"
+    "destroy:slave": "make slave-destroy",
+    "destroy:both": "make master-slave"
   },
   "engines": {
     "node": ">= 22.0.0"
