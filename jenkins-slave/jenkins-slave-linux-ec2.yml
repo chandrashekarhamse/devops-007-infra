@@ -123,7 +123,7 @@ Resources:
             sudo yum install java-17-amazon-corretto -y
             sudo yum install git -y
             sudo yum install ansible -y
-            JENKINS_MASTER_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=devops-007-infra-jenkins-master-dev-instance" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text)
+            # JENKINS_MASTER_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=devops-007-infra-jenkins-master-dev-instance" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text)
             JENKINS_URL=http://$(aws ec2 describe-instances --filters "Name=tag:Name,Values=devops-007-infra-jenkins-master-dev-instance" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text):8080
             JENKINS_USER="jenkins"
             JENKINS_AGENT_NAME="ec2-linux-docker-agent"
