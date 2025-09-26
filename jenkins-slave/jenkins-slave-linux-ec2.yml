@@ -19,6 +19,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/CloudWatchFullAccess
         - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
       Policies:
         - PolicyName: !Sub ${AWS::StackName}-policy
           PolicyDocument:
@@ -121,8 +122,15 @@ Resources:
             echo "---- Install java ----"
             sudo yum update -y
             sudo yum install java-17-amazon-corretto -y
+            
+            # Install git
             sudo yum install git -y
+            # Install ansible
             sudo yum install ansible -y
+            # Install terraform
+            sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+            sudo yum -y install terraform
+
             # JENKINS_MASTER_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=devops-007-infra-jenkins-master-dev-instance" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text)
             JENKINS_URL=http://$(aws ec2 describe-instances --filters "Name=tag:Name,Values=devops-007-infra-jenkins-master-dev-instance" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text):8080
             JENKINS_USER="jenkins"
