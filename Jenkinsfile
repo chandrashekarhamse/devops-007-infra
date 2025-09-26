@@ -56,6 +56,7 @@ pipeline {
         stage('Configure k8s worker node') {
             steps {
                 dir('ansible') {
+                    sh 'sleep 30'
                     sh 'ansible-playbook -i inventory/k8s-nodes/aws_ec2.yml worker-playbook.yml'
                 }
 >>>>>>> bbd60b2 (updated Jenkinsfile)
