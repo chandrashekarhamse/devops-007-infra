@@ -34,6 +34,7 @@ pipeline {
         stage('Configure k8s controlplane node') {
             steps {
                 dir('ansible') {
+                    sh 'sleep 120'
                     sh 'ansible-playbook -i inventory/k8s-nodes/aws_ec2.yml master-playbook.yml'
                 }
             }
@@ -41,6 +42,7 @@ pipeline {
         stage('Configure k8s worker node') {
             steps {
                 dir('ansible') {
+                    sh 'sleep 30'
                     sh 'ansible-playbook -i inventory/k8s-nodes/aws_ec2.yml worker-playbook.yml'
                 }
             }
