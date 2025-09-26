@@ -1,6 +1,9 @@
 def tag_destroy = 'destroy_k8s_nodes'
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 226a1b5 (updated jenkinsfile)
 pipeline {
   agent {
     label 'ec2-linux-docker-agent'
@@ -14,6 +17,7 @@ pipeline {
                     branches: [[name: '*/main']], 
                     userRemoteConfigs: [[url: 'https://github.com/chandrashekarhamse/terraform-automation.git']]
                 ])
+<<<<<<< HEAD
 =======
     stages {
         stage('checkout Terraform repo') {
@@ -60,6 +64,8 @@ pipeline {
                     sh 'ansible-playbook -i inventory/k8s-nodes/aws_ec2.yml worker-playbook.yml'
                 }
 >>>>>>> bbd60b2 (updated Jenkinsfile)
+=======
+>>>>>>> 226a1b5 (updated jenkinsfile)
             }
         }
     }
