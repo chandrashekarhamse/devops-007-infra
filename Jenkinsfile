@@ -88,6 +88,7 @@ pipeline {
           sh 'chmod 400 ec2-key.pem'
           sh '''
             pip3 install --no-cache-dir boto3 botocore
+            ansible-galaxy collection install amazon.aws --upgrade
           '''
           sh '''
             ansible-inventory -i inventory/k8s-nodes/aws_ec2.yaml --list
