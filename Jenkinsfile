@@ -4,6 +4,9 @@ pipeline {
   agent {
     label 'ec2-linux-docker-agent'
   }
+  environment {
+    ANSIBLE_KEY = credentials('ANSIBLE_SSH_PRIVATE_KEY') 
+  }
 
   stages {
     stage('Checkout Terraform Repo') {
@@ -27,9 +30,12 @@ pipeline {
       }
       steps {
         dir('terraform') {
-          sh 'terraform --version'
-          sh 'terraform init'
-          sh 'terraform plan'
+          sh '''
+            terraform --version
+            terraform init
+            terraform plan
+            terraform apply --auto-approve
+          '''
         }
       }
     }
@@ -72,7 +78,13 @@ pipeline {
       }
       steps {
         dir('ansible') {
-          sh 'ansible localhost -m ping -c local'
+          writeFile file: 'ec2-key.pem', text: "${ANSIBLE_KEY}"
+          sh 'chmod 400 ec2-key.pem'
+          sh '''
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/k8s-nodes/aws_ec2.yaml --private-key ec2-key.pem master-playbook.yml
+            sleep 60
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/k8s-nodes/aws_ec2.yaml --private-key ec2-key.pem worker-playbook.yml
+          '''
         }
       }
     }
