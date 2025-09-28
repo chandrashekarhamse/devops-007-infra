@@ -92,6 +92,7 @@ pipeline {
           '''
           sh '''
             ansible-inventory -i inventory/k8s-nodes/aws_ec2.yaml --list
+            sleep 3600
           '''
           // sh '''
           //   ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/k8s-nodes/aws_ec2.yaml --private-key ec2-key.pem master-playbook.yml
