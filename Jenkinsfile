@@ -86,6 +86,7 @@ pipeline {
         dir('ansible') {
           sh 'chmod 400 ec2-key.pem'
           sh '''
+            apk add --no-cache aws-cli
             apk add --no-cache py3-boto3 py3-botocore
             ansible-galaxy collection install amazon.aws --upgrade
           '''
