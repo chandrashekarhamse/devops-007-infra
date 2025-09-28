@@ -84,7 +84,6 @@ pipeline {
       }
       steps {
         dir('ansible') {
-          sh 'chmod 400 ec2-key.pem'
           sh '''
             apk add --no-cache aws-cli
             apk add --no-cache py3-boto3 py3-botocore
@@ -93,7 +92,6 @@ pipeline {
           withCredentials([file(credentialsId: 'EC2_PRIVATE_KEY', variable: 'PRIVATE_SSH_KEY')]) {
             sh '''
             ansible-inventory -i inventory/k8s-nodes/aws_ec2.yaml --list
-            sleep 3600
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/k8s-nodes/aws_ec2.yaml --private-key $PRIVATE_SSH_KEY master-playbook.yml
             sleep 60
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/k8s-nodes/aws_ec2.yaml --private-key $PRIVATE_SSH_KEY worker-playbook.yml
