@@ -4,18 +4,20 @@ pipeline {
   agent {
     label 'ec2-linux-docker-agent'
   }
+
   stages {
-    stage('checkout terraform repo') {
+    stage('Checkout Terraform Repo') {
       steps {
         dir('terraform') {
-          checkout([$class: 'GitSCM', 
-              branches: [[name: '*/main']], 
-              userRemoteConfigs: [[url: 'https://github.com/chandrashekarhamse/terraform-automation.git']]
+          checkout([$class: 'GitSCM',
+            branches: [[name: '*/main']],
+            userRemoteConfigs: [[url: 'https://github.com/chandrashekarhamse/terraform-automation.git']]
           ])
         }
       }
     }
-    stage('Create k8s nodes with terraform') {
+
+    stage('Create k8s Nodes with Terraform') {
       agent {
         docker {
           image 'hashicorp/terraform:1.13'
@@ -31,7 +33,8 @@ pipeline {
         }
       }
     }
-    stage('Destroy k8s nodes') {
+
+    stage('Destroy k8s Nodes') {
       when {
         tag tag_destroy
       }
@@ -45,31 +48,31 @@ pipeline {
       steps {
         dir('terraform') {
           sh 'terraform destroy --auto-approve'
-        }       
+        }
       }
     }
-  }
-  stages{
-    stage('checkout ansible repo') {
+
+    stage('Checkout Ansible Repo') {
       steps {
         dir('ansible') {
-          checkout([$class: 'GitSCM', 
-              branches: [[name: '*/main']], 
-              userRemoteConfigs: [[url: 'https://github.com/chandrashekarhamse/ansible-automation.git']]
-          ])   
-        }     
+          checkout([$class: 'GitSCM',
+            branches: [[name: '*/main']],
+            userRemoteConfigs: [[url: 'https://github.com/chandrashekarhamse/ansible-automation.git']]
+          ])
+        }
       }
     }
-    stage('configure k8s nodes using ansible') {
+
+    stage('Configure k8s Nodes using Ansible') {
       agent {
         docker {
           image 'alpine/ansible:2.17.0'
           reuseNode true
         }
       }
-      steps{
+      steps {
         dir('ansible') {
-          ansible localhost -m ping
+          sh 'ansible localhost -m ping -c local'
         }
       }
     }
