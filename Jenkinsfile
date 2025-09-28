@@ -24,7 +24,7 @@ pipeline {
         }
       }
       steps {
-        sn 'terraform --version'
+        sh 'terraform --version'
         sh 'terraform init'
         sh 'terraform plan'
         sh 'terraform apply --auto-approve'
