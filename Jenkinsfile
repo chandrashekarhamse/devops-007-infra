@@ -5,7 +5,10 @@ pipeline {
     label 'ec2-linux-docker-agent'
   }
   environment {
-    ANSIBLE_KEY = credentials('ANSIBLE_SSH_PRIVATE_KEY') 
+    ANSIBLE_KEY = credentials('ANSIBLE_SSH_PRIVATE_KEY')
+  }
+  parameters {
+    choice(name: 'DESTROY_K8s_INFRA', choices: ['No','Yes'], description: 'Destroy k8s Infra ?')
   }
 
   stages {
@@ -42,7 +45,9 @@ pipeline {
 
     stage('Destroy k8s Nodes') {
       when {
-        tag tag_destroy
+        expression {
+          return params.DESTROY_K8s_INFRA == 'Yes'
+        }
       }
       agent {
         docker {
