@@ -24,12 +24,13 @@ pipeline {
         }
       }
       steps {
-        sh 'pwd'
-        sh 'ls -ltr'
-        sh 'terraform --version'
-        sh 'terraform init'
-        sh 'terraform plan'
-        sh 'terraform apply --auto-approve'
+        dir('terraform') {
+          sh 'pwd'
+          sh 'ls -ltr'
+          sh 'terraform --version'
+          sh 'terraform init'
+          sh 'terraform plan'
+        }
       }
     }
     stage('Destroy k8s nodes') {
