@@ -74,7 +74,7 @@ pipeline {
       agent {
         docker {
           image 'hashicorp/terraform:1.13'
-          args '-v /var/run/docker.sock:/var/run/docker.sock'
+          args '--entrypoint="" -u root -v /var/run/docker.sock:/var/run/docker.sock -t'
           reuseNode true  // 👈 Mounts the same workspace from EC2 agent into the Docker container
         }
       }
