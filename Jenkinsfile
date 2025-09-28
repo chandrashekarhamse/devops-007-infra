@@ -5,7 +5,7 @@ pipeline {
     label 'ec2-linux-docker-agent'
   }
   environment {
-    ANSIBLE_KEY = credentials('ANSIBLE_SSH_PRIVATE_KEY')
+    ANSIBLE_KEY = credentials('ANSIBLE_EC2_PRIVATE_KEY')
   }
   parameters {
     choice(name: 'DESTROY_K8s_INFRA', choices: ['No','Yes'], description: 'Destroy k8s Infra ?')
