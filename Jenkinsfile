@@ -25,8 +25,6 @@ pipeline {
       }
       steps {
         dir('terraform') {
-          sh 'pwd'
-          sh 'ls -ltr'
           sh 'terraform --version'
           sh 'terraform init'
           sh 'terraform plan'
@@ -45,7 +43,9 @@ pipeline {
         }
       }
       steps {
-        sh 'terraform destroy --auto-approve'
+        dir('terraform') {
+          sh 'terraform destroy --auto-approve'
+        }       
       }
     }
   }
