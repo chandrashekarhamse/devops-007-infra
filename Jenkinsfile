@@ -86,6 +86,11 @@ pipeline {
           writeFile file: 'ec2-key.pem', text: "${ANSIBLE_KEY}"
           sh 'chmod 400 ec2-key.pem'
           sh '''
+            apk update 
+            apk add --no-cache python3 py3-pip
+            pip install boto3 botocore
+          '''
+          sh '''
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/k8s-nodes/aws_ec2.yaml --private-key ec2-key.pem master-playbook.yml
             sleep 60
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/k8s-nodes/aws_ec2.yaml --private-key ec2-key.pem worker-playbook.yml
