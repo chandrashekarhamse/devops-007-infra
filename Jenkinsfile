@@ -87,7 +87,7 @@ pipeline {
           writeFile file: 'ec2-key.pem', text: "${ANSIBLE_KEY}"
           sh 'chmod 400 ec2-key.pem'
           sh '''
-            pip3 install --no-cache-dir boto3 botocore
+            /usr/bin/python3 -m pip install boto3 botocore
             ansible-galaxy collection install amazon.aws --upgrade
           '''
           sh '''
