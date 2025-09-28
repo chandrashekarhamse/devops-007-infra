@@ -15,7 +15,7 @@ pipeline {
         }
       }
     }
-    stage('Create k8s nodes') {
+    stage('Create k8s nodes with terraform') {
       agent {
         docker {
           image 'hashicorp/terraform:1.13'
@@ -46,6 +46,31 @@ pipeline {
         dir('terraform') {
           sh 'terraform destroy --auto-approve'
         }       
+      }
+    }
+  }
+  stages{
+    stage('checkout ansible repo') {
+      steps {
+        dir('ansible') {
+          checkout([$class: 'GitSCM', 
+              branches: [[name: '*/main']], 
+              userRemoteConfigs: [[url: 'https://github.com/chandrashekarhamse/ansible-automation.git']]
+          ])   
+        }     
+      }
+    }
+    stage('configure k8s nodes using ansible') {
+      agent {
+        docker {
+          image 'alpine/ansible:2.17.0'
+          reuseNode true
+        }
+      }
+      steps{
+        dir('ansible') {
+          ansible localhost -m ping
+        }
       }
     }
   }
