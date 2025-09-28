@@ -24,6 +24,11 @@ pipeline {
     }
 
     stage('Create k8s Nodes with Terraform') {
+      when {
+        expression {
+          return params.DESTROY_K8s_INFRA == 'No'
+        }
+      }
       agent {
         docker {
           image 'hashicorp/terraform:1.13'
@@ -76,6 +81,11 @@ pipeline {
     }
 
     stage('Configure k8s Nodes using Ansible') {
+      when {
+        expression {
+          return params.DESTROY_K8s_INFRA == 'No'
+        }
+      }
       agent {
         docker {
           image 'alpine/ansible:2.17.0'
