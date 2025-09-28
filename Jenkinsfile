@@ -24,6 +24,7 @@ pipeline {
         }
       }
       steps {
+        sh 'pwd'
         sh 'ls -ltr'
         sh 'terraform --version'
         sh 'terraform init'
