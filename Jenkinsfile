@@ -19,7 +19,7 @@ pipeline {
       agent {
         docker {
           image 'hashicorp/terraform:1.13'
-          args '--entrypoint="" -u root -v /var/run/docker.sock:/var/run/docker.sock -t'
+          args '--entrypoint="sleep 300" -u root -v /var/run/docker.sock:/var/run/docker.sock -t'
           reuseNode true
         }
       }
